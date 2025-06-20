@@ -98,34 +98,29 @@ public class Main {
     }
 
     private static void compileDashboardRepo(Git git) {
-        // Get the repository directory (gradlew should be in the root of the cloned repository)
+        // Get the repository directory
         File repoDir = git.getRepository().getDirectory().getParentFile();
         System.out.println("Working directory: " + repoDir.getAbsolutePath());
         
-        // Use appropriate gradlew script based on OS
-        String gradlewScript = System.getProperty("os.name").toLowerCase().contains("windows") ? 
-            "gradlew.bat" : "gradlew";
-        File gradlew = new File(repoDir, gradlewScript);
-        
-        if (!gradlew.exists()) {
-            throw new RuntimeException(gradlewScript + " not found at: " + gradlew.getAbsolutePath());
+        // Check for pom.xml
+        File pomFile = new File(repoDir, "pom.xml");
+        if (!pomFile.exists()) {
+            throw new RuntimeException("pom.xml not found in repository");
         }
         
-        // Make gradlew executable on Unix-like systems
-        if (!System.getProperty("os.name").toLowerCase().contains("windows")) {
-            gradlew.setExecutable(true);
-        }
-        
-        System.out.println(gradlewScript + " exists: " + gradlew.exists());
-        System.out.println(gradlewScript + " is executable: " + gradlew.canExecute());
-
-        // Create ProcessBuilder with appropriate command based on OS
+        // Create ProcessBuilder for Maven
         ProcessBuilder processBuilder = new ProcessBuilder();
         if (System.getProperty("os.name").toLowerCase().contains("windows")) {
-            processBuilder.command("cmd.exe", "/c", gradlewScript, "lwjgl3:jar");
+            processBuilder.command("cmd.exe", "/c", "mvn", "clean", "package", "-DskipTests");
         } else {
-            processBuilder.command("./" + gradlewScript, "lwjgl3:jar");
+            processBuilder.command("mvn", "clean", "package", "-DskipTests");
         }
+        
+        // Set the working directory to the Dashboard directory
+        processBuilder.directory(repoDir);
+        
+        // Redirect error stream to output stream for easier handling
+        processBuilder.redirectErrorStream(true);
 
         // Set the working directory to the Dashboard directory
         processBuilder.directory(repoDir);
