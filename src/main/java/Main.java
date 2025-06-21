@@ -98,22 +98,33 @@ public class Main {
     }
 
     private static void compileDashboardRepo(Git git) {
-        // Get the repository directory
+        // Get the repository directory (gradlew should be in the root of the cloned repository)
         File repoDir = git.getRepository().getDirectory().getParentFile();
         System.out.println("Working directory: " + repoDir.getAbsolutePath());
-        
-        // Check for pom.xml
-        File pomFile = new File(repoDir, "pom.xml");
-        if (!pomFile.exists()) {
-            throw new RuntimeException("pom.xml not found in repository");
+
+        // Use appropriate gradlew script based on OS
+        String gradlewScript = System.getProperty("os.name").toLowerCase().contains("windows") ?
+                "gradlew.bat" : "gradlew";
+        File gradlew = new File(repoDir, gradlewScript);
+
+        if (!gradlew.exists()) {
+            throw new RuntimeException(gradlewScript + " not found at: " + gradlew.getAbsolutePath());
         }
-        
-        // Create ProcessBuilder for Maven
+
+        // Make gradlew executable on Unix-like systems
+        if (!System.getProperty("os.name").toLowerCase().contains("windows")) {
+            gradlew.setExecutable(true);
+        }
+
+        System.out.println(gradlewScript + " exists: " + gradlew.exists());
+        System.out.println(gradlewScript + " is executable: " + gradlew.canExecute());
+
+        // Create ProcessBuilder with appropriate command based on OS
         ProcessBuilder processBuilder = new ProcessBuilder();
         if (System.getProperty("os.name").toLowerCase().contains("windows")) {
-            processBuilder.command("cmd.exe", "/c", "mvn", "clean", "package", "-DskipTests");
+            processBuilder.command("cmd.exe", "/c", gradlewScript, "lwjgl3:jar");
         } else {
-            processBuilder.command("mvn", "clean", "package", "-DskipTests");
+            processBuilder.command("./" + gradlewScript, "lwjgl3:jar");
         }
         
         // Set the working directory to the Dashboard directory
